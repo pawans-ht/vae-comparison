@@ -8,7 +8,7 @@ import os
 from huggingface_hub import login
 
 # Get token from environment variable
-hf_token = os.getenv("HF_TOKEN")
+hf_token = os.getenv("access_token")
 login(token=hf_token)
 
 class VAETester:
