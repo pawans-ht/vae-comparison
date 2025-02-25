@@ -1,11 +1,15 @@
 import gradio as gr
 import torch
 from diffusers import AutoencoderKL
-from PIL import Image
 import torchvision.transforms.v2 as transforms
 from torchvision.io import read_image
 from typing import Tuple, Dict, List
+import os
+from huggingface_hub import login
 
+# Get token from environment variable
+hf_token = os.getenv("HF_TOKEN")
+login(token=hf_token)
 
 class VAETester:
     def __init__(self, device: str = "cuda" if torch.cuda.is_available() else "cpu"):
@@ -43,7 +47,7 @@ class VAETester:
     def process_image(self,
                       img: torch.Tensor,
                       vae: AutoencoderKL,
-                      tolerance: float) -> Tuple[Image.Image, Image.Image, float]:
+                      tolerance: float):
         """Process image through a single VAE"""
         img_transformed = self.input_transform(img).to(self.device).unsqueeze(0)
         original_base = self.base_transform(img).cpu()
@@ -67,7 +71,7 @@ class VAETester:
 
     def process_all_models(self,
                            img: torch.Tensor,
-                           tolerance: float) -> Dict[str, Tuple[Image.Image, Image.Image, float]]:
+                           tolerance: float):
         """Process image through all loaded VAEs"""
         results = {}
         for name, vae in self.vae_models.items():
@@ -80,7 +84,7 @@ class VAETester:
 tester = VAETester()
 
 
-def test_all_vaes(image_path: str, tolerance: float) -> Tuple[List[Image.Image], List[Image.Image], List[str]]:
+def test_all_vaes(image_path: str, tolerance: float):
     """Gradio interface function to test all VAEs"""
     try:
         img_tensor = read_image(image_path)
