@@ -6,6 +6,8 @@ from torchvision.io import read_image
 from typing import Dict
 import os
 from huggingface_hub import login
+import spaces
+
 
 # Get token from environment variable
 hf_token = os.getenv("access_token")
@@ -93,7 +95,7 @@ class VAETester:
 # Initialize tester
 tester = VAETester()
 
-@spaces.GPU(duration=10)
+@spaces.GPU(duration=5)
 def test_all_vaes(image_path: str, tolerance: float):
     """Gradio interface function to test all VAEs"""
     try:

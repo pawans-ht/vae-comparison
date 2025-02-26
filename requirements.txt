@@ -4,3 +4,4 @@ accelerate
 diffusers
 safetensors
 huggingface_hub
+spaces
