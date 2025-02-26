@@ -92,7 +92,7 @@ class VAETester:
         return results
 
 
-@spaces.GPU(duration=5)
+@spaces.GPU(duration=10)
 def test_all_vaes(image_path: str, tolerance: float, img_size: int):
     """Gradio interface function to test all VAEs"""
     # Initialize tester
