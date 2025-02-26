@@ -3,7 +3,7 @@ import torch
 from diffusers import AutoencoderKL
 import torchvision.transforms.v2 as transforms
 from torchvision.io import read_image
-from typing import Tuple, Dict, List
+from typing import Dict
 import os
 from huggingface_hub import login
 
@@ -11,17 +11,27 @@ from huggingface_hub import login
 hf_token = os.getenv("access_token")
 login(token=hf_token)
 
+class PadToSquare:
+    """Custom transform to pad an image to square dimensions"""
+    def __call__(self, img):
+        _, h, w = img.shape  # Get the original dimensions
+        max_side = max(h, w)
+        pad_h = (max_side - h) // 2
+        pad_w = (max_side - w) // 2
+        padding = (pad_w, pad_h, max_side - w - pad_w, max_side - h - pad_h)
+        return transforms.functional.pad(img, padding, padding_mode="edge")
+
 class VAETester:
     def __init__(self, device: str = "cuda" if torch.cuda.is_available() else "cpu"):
         self.device = device
         self.input_transform = transforms.Compose([
-            transforms.Pad(padding=[128, 0], padding_mode="edge"),
+            PadToSquare(),
             transforms.Resize((512, 512), antialias=True),
             transforms.ToDtype(torch.float32, scale=True),
             transforms.Normalize(mean=[0.5], std=[0.5]),
         ])
         self.base_transform = transforms.Compose([
-            transforms.Pad(padding=[128, 0], padding_mode="edge"),
+            PadToSquare(),
             transforms.Resize((512, 512), antialias=True),
             transforms.ToDtype(torch.float32, scale=True),
         ])
@@ -33,9 +43,10 @@ class VAETester:
     def _load_all_vaes(self) -> Dict[str, AutoencoderKL]:
         """Load all available VAE models"""
         vae_configs = {
-            "Stable Diffusion 3 Medium": ("stabilityai/stable-diffusion-3-medium-diffusers", "vae"),
-            "Stable Diffusion v1-4": ("CompVis/stable-diffusion-v1-4", "vae"),
-            "SD VAE FT-MSE": ("stabilityai/sd-vae-ft-mse", ""),
+            "stable-diffusion-v1-4": ("CompVis/stable-diffusion-v1-4", "vae"),
+            "sd-vae-ft-mse": ("stabilityai/sd-vae-ft-mse", ""),
+            "sdxl-vae": ("stabilityai/sdxl-vae", ""),
+            "stable-diffusion-3-medium": ("stabilityai/stable-diffusion-3-medium-diffusers", "vae"),
             "FLUX.1-dev": ("black-forest-labs/FLUX.1-dev", "vae")
         }
 
@@ -79,7 +90,6 @@ class VAETester:
             results[name] = (diff_img, recon_img, score)
         return results
 
-
 # Initialize tester
 tester = VAETester()
 
@@ -96,21 +106,31 @@ def test_all_vaes(image_path: str, tolerance: float):
 
         for name in tester.vae_models.keys():
             diff_img, recon_img, score = results[name]
-            diff_images.append(diff_img)
-            recon_images.append(recon_img)
-            scores.append(f"{name}: {score:.2f}")
+            diff_images.append((diff_img, name))
+            recon_images.append((recon_img, name))
+            scores.append(f"{name:<25}: {score:.1f}")
 
-        return diff_images, recon_images, scores
+        return diff_images, recon_images, "\n".join(scores)
 
     except Exception as e:
         error_msg = f"Error: {str(e)}"
-        return [None], [None], [error_msg]
+        return [None], [None], error_msg
 
+examples = [f"examples/{img_filename}" for img_filename in sorted(os.listdir("examples/"))]
 
 # Gradio interface
-with gr.Blocks(title="VAE Performance Tester") as demo:
-    gr.Markdown("# VAE Performance Testing Tool")
-    gr.Markdown("Upload an image to compare all VAE models simultaneously")
+with gr.Blocks(title="VAE Performance Tester", css=".monospace-text {font-family: 'Courier New', Courier, monospace;}") as demo:
+    gr.Markdown("# VAE Comparison Tool")
+    gr.Markdown("""
+        Upload an image or select an example to compare how different VAEs reconstruct it. Here's what happens:
+        1. The image is padded to a square and resized to 512x512 pixels.
+        2. Each VAE encodes the image into a latent space and decodes it back.
+        3. The tool then generates:
+           - **Difference Maps**: Black-and-white images showing where the reconstruction differs from the original (white areas indicate differences above the tolerance threshold).
+           - **Reconstructed Images**: The outputs from each VAE.
+           - **Sum of Differences**: A numerical score for each VAE, measuring the total difference in pixels exceeding the tolerance.
+        Use the tolerance slider to adjust the sensitivity.
+    """)
 
     with gr.Row():
         with gr.Column(scale=1):
@@ -120,7 +140,8 @@ with gr.Blocks(title="VAE Performance Tester") as demo:
                 maximum=0.5,
                 value=0.1,
                 step=0.01,
-                label="Difference Tolerance"
+                label="Difference Tolerance",
+                info="Low tolerance (e.g., 0.01): Highly sensitive, flags small deviations. High tolerance (e.g., 0.5): Less sensitive, flags only large deviations, showing fewer differences.",
             )
             submit_btn = gr.Button("Test All VAEs")
 
@@ -128,7 +149,15 @@ with gr.Blocks(title="VAE Performance Tester") as demo:
             with gr.Row():
                 diff_gallery = gr.Gallery(label="Difference Maps", columns=4, height=512)
                 recon_gallery = gr.Gallery(label="Reconstructed Images", columns=4, height=512)
-            scores_output = gr.Textbox(label="Difference Scores", lines=4)
+            scores_output = gr.Textbox(label="Sum of difference (lower is better reconstruction)", lines=5, elem_classes="monospace-text")
+
+        if examples:
+            with gr.Column():
+                example_gallery = gr.Examples(
+                    examples=examples,
+                    inputs=image_input,
+                    label="Example Images"
+                )
 
     submit_btn.click(
         fn=test_all_vaes,
@@ -138,3 +167,4 @@ with gr.Blocks(title="VAE Performance Tester") as demo:
 
 if __name__ == "__main__":
     demo.launch()
+
