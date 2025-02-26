@@ -24,17 +24,17 @@ class PadToSquare:
         return transforms.functional.pad(img, padding, padding_mode="edge")
 
 class VAETester:
-    def __init__(self, device: str = "cuda" if torch.cuda.is_available() else "cpu"):
+    def __init__(self, device: str = "cuda" if torch.cuda.is_available() else "cpu", img_size: int = 512):
         self.device = device
         self.input_transform = transforms.Compose([
             PadToSquare(),
-            transforms.Resize((512, 512), antialias=True),
+            transforms.Resize((img_size, img_size)),
             transforms.ToDtype(torch.float32, scale=True),
             transforms.Normalize(mean=[0.5], std=[0.5]),
         ])
         self.base_transform = transforms.Compose([
             PadToSquare(),
-            transforms.Resize((512, 512), antialias=True),
+            transforms.Resize((img_size, img_size)),
             transforms.ToDtype(torch.float32, scale=True),
         ])
         self.output_transform = transforms.Normalize(mean=[-1], std=[2])
@@ -67,8 +67,7 @@ class VAETester:
 
         with torch.no_grad():
             encoded = vae.encode(img_transformed).latent_dist.sample()
-            encoded_scaled = encoded * vae.config.scaling_factor
-            decoded = vae.decode(encoded_scaled / vae.config.scaling_factor).sample
+            decoded = vae.decode(encoded).sample
 
         decoded_transformed = self.output_transform(decoded.squeeze(0)).cpu()
         reconstructed = decoded_transformed.clip(0, 1)
@@ -92,12 +91,12 @@ class VAETester:
             results[name] = (diff_img, recon_img, score)
         return results
 
-# Initialize tester
-tester = VAETester()
 
 @spaces.GPU(duration=5)
-def test_all_vaes(image_path: str, tolerance: float):
+def test_all_vaes(image_path: str, tolerance: float, img_size: int):
     """Gradio interface function to test all VAEs"""
+    # Initialize tester
+    tester = VAETester(img_size=img_size)
     try:
         img_tensor = read_image(image_path)
         results = tester.process_all_models(img_tensor, tolerance)
@@ -110,7 +109,7 @@ def test_all_vaes(image_path: str, tolerance: float):
             diff_img, recon_img, score = results[name]
             diff_images.append((diff_img, name))
             recon_images.append((recon_img, name))
-            scores.append(f"{name:<25}: {score:.1f}")
+            scores.append(f"{name:<25}: {score:,.0f}")
 
         return diff_images, recon_images, "\n".join(scores)
 
@@ -125,7 +124,7 @@ with gr.Blocks(title="VAE Performance Tester", css=".monospace-text {font-family
     gr.Markdown("# VAE Comparison Tool")
     gr.Markdown("""
         Upload an image or select an example to compare how different VAEs reconstruct it. Here's what happens:
-        1. The image is padded to a square and resized to 512x512 pixels.
+        1. The image is padded to a square and resized to `512x512` pixels (can change using `Image Size` dropdown).
         2. Each VAE encodes the image into a latent space and decodes it back.
         3. The tool then generates:
            - **Difference Maps**: Black-and-white images showing where the reconstruction differs from the original (white areas indicate differences above the tolerance threshold).
@@ -145,6 +144,10 @@ with gr.Blocks(title="VAE Performance Tester", css=".monospace-text {font-family
                 label="Difference Tolerance",
                 info="Low tolerance (e.g., 0.01): Highly sensitive, flags small deviations. High tolerance (e.g., 0.5): Less sensitive, flags only large deviations, showing fewer differences.",
             )
+            img_size = gr.Dropdown(
+                label="Image Size",
+                choices=[512, 1024],
+            )
             submit_btn = gr.Button("Test All VAEs")
 
         with gr.Column(scale=3):
@@ -163,7 +166,7 @@ with gr.Blocks(title="VAE Performance Tester", css=".monospace-text {font-family
 
     submit_btn.click(
         fn=test_all_vaes,
-        inputs=[image_input, tolerance_slider],
+        inputs=[image_input, tolerance_slider, img_size],
         outputs=[diff_gallery, recon_gallery, scores_output]
     )
 
