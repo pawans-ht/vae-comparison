@@ -154,7 +154,7 @@ with gr.Blocks(title="VAE Performance Tester", css=".monospace-text {font-family
             scores_output = gr.Textbox(label="Sum of difference (lower is better reconstruction)", lines=5, elem_classes="monospace-text")
 
         if examples:
-            with gr.Column():
+            with gr.Row():
                 example_gallery = gr.Examples(
                     examples=examples,
                     inputs=image_input,
