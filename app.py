@@ -1,3 +1,4 @@
+import spaces
 import gradio as gr
 import torch
 from diffusers import AutoencoderKL
@@ -7,7 +8,6 @@ from torchvision.io import read_image
 from typing import Dict
 import os
 from huggingface_hub import login
-import spaces
 
 
 # Get token from environment variable
