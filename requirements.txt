@@ -1,7 +1,7 @@
 torch
 torchvision
 accelerate
-diffusers
+diffusers>=0.32.2
 safetensors
 huggingface_hub
 spaces
