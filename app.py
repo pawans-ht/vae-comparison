@@ -198,4 +198,4 @@ with gr.Blocks(title="VAE Performance Tester", css=".monospace-text {font-family
     )
 
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(ssr_mode=False)
