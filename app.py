@@ -64,12 +64,12 @@ class VAETester:
         order = [
             "stable-diffusion-v1-4",
             "sd-vae-ft-mse",
-            "sd-vae-ft-mse (remote)",
+            #"sd-vae-ft-mse (remote)",
             "sdxl-vae",
-            "sdxl-vae (remote)",
+            #"sdxl-vae (remote)",
             "stable-diffusion-3-medium",
             "FLUX.1-schnell",
-            "FLUX.1-schnell (remote)",
+            #"FLUX.1-schnell (remote)",
             "FLUX.1-dev",
         ]
 
