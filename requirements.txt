@@ -3,6 +3,7 @@ torchvision
 accelerate
 safetensors
 huggingface_hub
-spaces
+spaces>=0.34.2
+gradio>=5.25.2
 torchao  # latest diffusers request this
 git+https://github.com/huggingface/diffusers@main
