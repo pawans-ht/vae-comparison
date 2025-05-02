@@ -1,0 +1,18 @@
+[project]
+name = "vae-comparison"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+    "accelerate>=1.6.0",
+    "diffusers>=0.33.1",
+    "gradio>=5.29.0",
+    "opencv-python>=4.11.0.86",
+    "spaces>=0.35.0",
+    "torch>=2.7.0",
+    "torchvision>=0.22.0",
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
