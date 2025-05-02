@@ -128,8 +128,6 @@ def process_video(video_path: str, output_dir: str, tolerance: float = 0.1):
     try:
         # Get video properties
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
         # Calculate padding for frame numbers
         padding = len(str(total_frames))

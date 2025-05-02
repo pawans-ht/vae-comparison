@@ -67,3 +67,40 @@ The script processes each frame of the video and creates a comparison grid image
 - Difference visualization (highlighting areas that exceed the tolerance threshold)
 
 Output images are saved as PNG files in an `analysis_results` subdirectory within the specified output directory, named sequentially as `frame_XXXX.png`. When using the `-c` flag, these frames are also compiled into a video file using ffmpeg.
+
+## Batch Video Processor (`batch_process_videos.py`)
+
+A utility script to process multiple videos in a directory using the VAE comparison tool.
+
+### Usage
+
+The batch processor provides a command-line interface with the following arguments:
+
+- `--videos_dir` or `-d` (required): Directory containing video files to process
+- `--output_dir` or `-o` (optional): Base directory to save output for all videos
+- `--tolerance` or `-t` (optional): Difference tolerance threshold (default: 0.1)
+- `--create_video` or `-c` (optional): Flag to create comparison videos for all processed videos
+- `--parallel` or `-p` (optional): Number of videos to process in parallel (default: 1)
+
+#### Examples
+
+1. Process all videos in a directory sequentially:
+```bash
+uv run batch_process_videos.py -d path/to/videos
+```
+
+2. Process videos with custom settings:
+```bash
+uv run batch_process_videos.py -d path/to/videos -o path/to/batch_output -t 0.15 -c
+```
+
+3. Process multiple videos in parallel (e.g., 4 at a time):
+```bash
+uv run batch_process_videos.py -d path/to/videos -o path/to/batch_output -c -p 4
+```
+
+### Output
+
+The batch processor creates separate output directories for each video within the specified output directory. Each video's output follows the same structure described in the Command-Line Video Processor section.
+
+The script provides progress updates during execution and a summary of successfully/failed processing attempts at the end.
