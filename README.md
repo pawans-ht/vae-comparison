@@ -26,6 +26,8 @@ A command-line tool to process videos through a VAE (Variational Autoencoder) an
    uv sync
    ```
 
+**Important Note:** This tool requires `ffmpeg` to be installed separately on your system for video creation functionality.
+
 ### Usage
 
 The script provides a command-line interface with the following arguments:
@@ -33,6 +35,7 @@ The script provides a command-line interface with the following arguments:
 - `--video_path` or `-v` (required): Path to the input video file
 - `--output_dir` or `-o` (optional): Directory to save output grid images. If not specified, creates a directory named `output_frames_[video_name]`
 - `--tolerance` or `-t` (optional): Difference tolerance threshold (default: 0.1)
+- `--create_video` or `-c` (optional): Flag to create output video
 
 #### Examples
 
@@ -51,6 +54,11 @@ uv run process_video_cli.py -v path/to/video.mp4 -o path/to/output -t 0.1
 uv run process_video_cli.py -v path/to/video.mp4
 ```
 
+4. Creating a comparison video:
+```bash
+uv run process_video_cli.py -v path/to/video.mp4 -o path/to/output -c
+```
+
 ### Output
 
 The script processes each frame of the video and creates a comparison grid image containing:
@@ -58,4 +66,4 @@ The script processes each frame of the video and creates a comparison grid image
 - Reconstructed frame (after VAE encoding/decoding)
 - Difference visualization (highlighting areas that exceed the tolerance threshold)
 
-Output images are saved as PNG files in the specified output directory, named sequentially as `frame_XXXX.png`.
+Output images are saved as PNG files in an `analysis_results` subdirectory within the specified output directory, named sequentially as `frame_XXXX.png`. When using the `-c` flag, these frames are also compiled into a video file using ffmpeg.

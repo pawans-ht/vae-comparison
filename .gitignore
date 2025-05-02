@@ -2,3 +2,5 @@
 .gradio
 temp
 examples
+*.png
+*.jpeg

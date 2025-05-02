@@ -2,10 +2,43 @@ import argparse
 import os
 import cv2
 import numpy as np
+import subprocess
 import torch
 from diffusers import AutoencoderKL
 import torchvision.transforms.v2 as transforms
 from PIL import Image
+
+
+def create_video_from_frames(frames_dir, output_video_path, fps):
+    """Create a video from a sequence of frame images using ffmpeg"""
+    try:
+        # Convert frames_dir to absolute path
+        frames_dir_abs = os.path.abspath(frames_dir)
+        
+        # Get the padding by checking existing frame files
+        frame_files = [f for f in os.listdir(frames_dir_abs) if f.startswith('frame_') and f.endswith('.png')]
+        if not frame_files:
+            raise ValueError("No frame files found in directory")
+        # Extract padding from first frame filename (format: frame_000.png)
+        padding = len(frame_files[0].split('.')[0].split('_')[1])
+        
+        input_pattern = os.path.join(frames_dir_abs, f'frame_%0{padding}d.png')
+        
+        cmd = [
+            'ffmpeg', '-y',  # Overwrite output file if it exists
+            '-framerate', str(fps),
+            '-start_number', '0',
+            '-i', input_pattern,
+            '-c:v', 'libx264',
+            '-pix_fmt', 'yuv420p',
+            output_video_path
+        ]
+        subprocess.run(cmd, check=True, capture_output=True, text=True)
+        print(f"Video created successfully: {output_video_path}")
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"Error creating video: {e.stderr}")
+        return False
 
 class VAETester:
     def __init__(self, device: str = "cuda" if torch.cuda.is_available() else "cpu"):
@@ -82,6 +115,10 @@ def process_video(video_path: str, output_dir: str, tolerance: float = 0.1):
 
     # Create output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
+    
+    # Create analysis_results subdirectory
+    results_dir = os.path.join(output_dir, "analysis_results")
+    os.makedirs(results_dir, exist_ok=True)
 
     # Initialize video capture
     cap = cv2.VideoCapture(video_path)
@@ -113,7 +150,7 @@ def process_video(video_path: str, output_dir: str, tolerance: float = 0.1):
             grid = create_comparison_grid(original, reconstructed, diff)
 
             # Save the grid image
-            output_path = os.path.join(output_dir, f"frame_{frame_idx:0{padding}d}.png")
+            output_path = os.path.join(results_dir, f"frame_{frame_idx:0{padding}d}.png")
             grid.save(output_path)
 
             frame_idx += 1
@@ -124,11 +161,24 @@ def process_video(video_path: str, output_dir: str, tolerance: float = 0.1):
         cap.release()
 
 
+def get_video_info(video_path):
+    """Get video properties like FPS"""
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        raise RuntimeError(f"Error opening video file: {video_path}")
+    try:
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        return {"fps": fps}
+    finally:
+        cap.release()
+
+
 def main():
     parser = argparse.ArgumentParser(description="Process video frames through VAE and save comparison grids")
     parser.add_argument("-v", "--video_path", required=True, help="Path to the input video file")
     parser.add_argument("-o", "--output_dir", default=None, help="Path to save output grid images (optional)")
     parser.add_argument("-t", "--tolerance", type=float, default=0.1, help="Difference tolerance (default: 0.1)")
+    parser.add_argument("-c", "--create_video", action="store_true", help="Create comparison video from processed frames")
 
     args = parser.parse_args()
 
@@ -138,7 +188,21 @@ def main():
         args.output_dir = f"output_frames_{video_name}"
 
     try:
+        # Get video properties first
+        video_info = get_video_info(args.video_path)
+        
+        # Process the video frames
         process_video(args.video_path, args.output_dir, args.tolerance)
+        
+        # Create video if requested
+        if args.create_video:
+            results_dir = os.path.join(args.output_dir, "analysis_results")
+            video_filename = f"{os.path.splitext(os.path.basename(args.video_path))[0]}_comparison.mp4"
+            video_path = os.path.join(args.output_dir, video_filename)
+            print(f"\nCreating comparison video: {video_filename}")
+            if not create_video_from_frames(results_dir, video_path, video_info["fps"]):
+                print("Failed to create video.")
+                exit(1)
     except Exception as e:
         print(f"Error: {str(e)}")
         exit(1)
