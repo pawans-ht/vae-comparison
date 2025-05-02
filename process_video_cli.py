@@ -126,9 +126,9 @@ def process_video(video_path: str, output_dir: str, tolerance: float = 0.1):
 
 def main():
     parser = argparse.ArgumentParser(description="Process video frames through VAE and save comparison grids")
-    parser.add_argument("--video_path", required=True, help="Path to the input video file")
-    parser.add_argument("--output_dir", default=None, help="Path to save output grid images (optional)")
-    parser.add_argument("--tolerance", type=float, default=0.1, help="Difference tolerance (default: 0.1)")
+    parser.add_argument("-v", "--video_path", required=True, help="Path to the input video file")
+    parser.add_argument("-o", "--output_dir", default=None, help="Path to save output grid images (optional)")
+    parser.add_argument("-t", "--tolerance", type=float, default=0.1, help="Difference tolerance (default: 0.1)")
 
     args = parser.parse_args()
 
